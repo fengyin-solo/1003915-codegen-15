@@ -24,6 +24,16 @@
       </span>
     </p>
 
+    <section v-if="verifyTasks.length" class="verify-panel">
+      <h3>设备修复核验任务</h3>
+      <p class="verify-note">监测设备确认修复后自动生成的核验任务，同一台设备只保留一条待巡查任务，完成巡查即闭环。</p>
+      <ul class="verify-list">
+        <li v-for="task in verifyTasks" :key="String(task.id)">
+          {{ task['巡查编号'] }} · {{ task['隐患点编号'] }} · {{ task['处置措施'] }}（{{ task['巡查日期'] }}）
+        </li>
+      </ul>
+    </section>
+
     <form class="filter-bar" @submit.prevent="reload">
       <label v-for="field in filterFields" :key="field" class="filter-item">
         <span>{{ field }}</span>
@@ -88,6 +98,7 @@ const statuses = ["待巡查", "已巡查", "发现异常", "已处置"]
 const stats = [{"label": "本月巡查次数", "value": 0}, {"label": "发现异常数", "value": 0}, {"label": "待处置数", "value": 0}]
 
 const rows = ref<EntryRow[]>([])
+const verifyTasks = ref<EntryRow[]>([])
 const total = ref(0)
 const errorMessage = ref('')
 const filters = ref<Record<string, string>>({})
@@ -128,6 +139,10 @@ function reload() {
     const payload = listEntries(meta.key, filters.value)
     rows.value = payload.items
     total.value = payload.total
+    // 核验任务不受筛选条件影响，始终看全量里的待巡查核验单。
+    verifyTasks.value = listEntries(meta.key).items.filter(
+      (row) => String(row['巡查范围']) === '设备修复核验' && row.status === '待巡查',
+    )
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '巡查排查列表读取失败'
   }
